@@ -21,6 +21,11 @@ export interface Course {
   createdAt: string;
 }
 export interface Assignment {
+  recurrenceSeriesId?: string;
+  occurrenceIndex?: number;
+  originalOccurrenceDate?: string;
+  recurrenceException?: boolean;
+  recurrenceRule?: RecurrenceRule;
   id: string;
   title: string;
   description?: string;
@@ -38,6 +43,24 @@ export interface Assignment {
   completedAt?: string;
 }
 export interface PlannerData {
+  recurrenceSeries?: RecurrenceSeries[];
   courses: Course[];
   assignments: Assignment[];
+}
+
+export type RecurrenceScope = 'one' | 'future' | 'all';
+export interface RecurrenceRule {
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'custom';
+  interval: number;
+  unit: 'day' | 'week';
+  weekdays: number[];
+  endDate?: string;
+  count?: number;
+}
+export interface RecurrenceSeries {
+  id: string;
+  rule: RecurrenceRule;
+  startDate: string;
+  template: Assignment;
+  excludedIndices: number[];
 }

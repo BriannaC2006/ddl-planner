@@ -1,6 +1,18 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import type { Assignment, PlannerData } from '@/types/planner';
+import type {
+  Assignment,
+  PlannerData,
+  RecurrenceRule,
+  RecurrenceScope,
+} from '@/types/planner';
+import {
+  createSeries,
+  updateSeries,
+  deleteOccurrences,
+  duplicateNextWeek,
+} from '@/lib/recurrence';
+import type { Params } from '@/lib/i18n';
 import { storage, STORAGE_KEY } from '@/lib/storage';
 import {
   completeAssignment,
@@ -12,6 +24,7 @@ import {
 export type Notice = {
   id: string;
   message: string;
+  params?: Params;
   assignmentId?: string;
   completedAt?: string;
 };
@@ -65,10 +78,11 @@ export function usePlanner() {
     noticeTimers.current.delete(id);
     setNotices((n) => n.filter((x) => x.id !== id));
   }
-  function notify(message: string, assignment?: Assignment) {
+  function notify(message: string, assignment?: Assignment, params?: Params) {
     const notice: Notice = {
       id: crypto.randomUUID(),
       message,
+      params,
       assignmentId: assignment?.id,
       completedAt: assignment?.completedAt,
     };
@@ -97,7 +111,7 @@ export function usePlanner() {
       next.id,
       setTimeout(() => stopAnimation(next.id), COMPLETION_DELAY),
     );
-    notify(`已完成「${next.title}」`, next);
+    notify('已完成「{0}」', next, { '0': next.title });
   }
   function saveAssignment(draft: Assignment) {
     const d = dataRef.current;
@@ -163,7 +177,7 @@ export function usePlanner() {
     else {
       stopAnimation(next.id);
       setNotices((n) => n.filter((x) => x.assignmentId !== next.id));
-      notify(`已恢复「${next.title}」`);
+      notify('已恢复「{0}」', undefined, { '0': next.title });
     }
   }
   function undo(notice: Notice) {
@@ -174,14 +188,50 @@ export function usePlanner() {
       toggleCompletion(a);
     dismiss(notice.id);
   }
-  function deleteRecord(kind: 'course' | 'assignment', id: string) {
+  function deleteRecord(
+    kind: 'course' | 'assignment',
+    id: string,
+    scope: RecurrenceScope = 'one',
+  ) {
     const d = dataRef.current;
     if (!d) return false;
+    const target = d.assignments.find((a) => a.id === id);
+    const scoped =
+      kind === 'assignment' && target ? deleteOccurrences(d, target, scope) : d;
     const removed = d.assignments
-      .filter((a) => (kind === 'course' ? a.courseId === id : a.id === id))
+      .filter((a) =>
+        kind === 'course'
+          ? a.courseId === id
+          : !scoped.assignments.some((x) => x.id === a.id),
+      )
       .map((a) => a.id);
     const next = {
-      ...d,
+      ...scoped,
+      recurrenceSeries:
+        kind === 'course'
+          ? d.recurrenceSeries
+              ?.filter((s) =>
+                d.assignments.some(
+                  (a) =>
+                    a.recurrenceSeriesId === s.id && !removed.includes(a.id),
+                ),
+              )
+              .map((s) => ({
+                ...s,
+                excludedIndices: [
+                  ...new Set([
+                    ...s.excludedIndices,
+                    ...d.assignments
+                      .filter(
+                        (a) =>
+                          a.recurrenceSeriesId === s.id &&
+                          removed.includes(a.id),
+                      )
+                      .map((a) => a.occurrenceIndex ?? 0),
+                  ]),
+                ],
+              }))
+          : scoped.recurrenceSeries,
       courses:
         kind === 'course' ? d.courses.filter((c) => c.id !== id) : d.courses,
       assignments: d.assignments.filter((a) => !removed.includes(a.id)),
@@ -190,6 +240,48 @@ export function usePlanner() {
     removed.forEach(stopAnimation);
     setNotices((n) => n.filter((x) => !removed.includes(x.assignmentId ?? '')));
     notify('已删除');
+    return true;
+  }
+  function saveRecurring(
+    a: Assignment,
+    rule: RecurrenceRule | undefined,
+    scope: RecurrenceScope,
+  ) {
+    const d = dataRef.current;
+    if (!d) return false;
+    try {
+      const old = d.assignments.find((x) => x.id === a.id);
+      if (old?.recurrenceSeriesId && scope === 'one')
+        return saveAssignment({
+          ...a,
+          recurrenceException: true,
+          recurrenceRule: old.recurrenceRule,
+        });
+      const next = old?.recurrenceSeriesId
+        ? updateSeries(d, a, scope, rule)
+        : rule
+          ? createSeries(d, a, rule)
+          : d;
+      if (!commit(next)) return false;
+      notify('循环作业已保存');
+      return true;
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : '未能保存更改，请检查浏览器可用存储空间后重试。',
+      );
+      return false;
+    }
+  }
+  function duplicate(a: Assignment) {
+    const d = dataRef.current;
+    if (!d) return false;
+    if (
+      !commit({ ...d, assignments: [...d.assignments, duplicateNextWeek(a)] })
+    )
+      return false;
+    notify('作业已复制到下周');
     return true;
   }
   return {
@@ -202,6 +294,8 @@ export function usePlanner() {
     undo,
     completing,
     saveAssignment,
+    saveRecurring,
+    duplicate,
     toggleCompletion,
     deleteRecord,
     visibleAssignments:

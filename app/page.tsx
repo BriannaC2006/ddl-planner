@@ -45,6 +45,8 @@ import {
 } from '@/lib/assignment-filters';
 import { dateLabel } from '@/lib/dates';
 import { t } from '@/lib/i18n';
+import { useLanguage } from '@/hooks/use-language';
+import type { RecurrenceRule, RecurrenceScope } from '@/types/planner';
 const pages = [
   'Dashboard',
   'Calendar',
@@ -79,6 +81,7 @@ export default function Home() {
   );
 }
 function Planner() {
+  const { language, setLanguage } = useLanguage();
   const { setOpenMobile } = useSidebar();
   const {
     data,
@@ -90,6 +93,8 @@ function Planner() {
     undo,
     completing,
     saveAssignment,
+    saveRecurring,
+    duplicate,
     toggleCompletion,
     deleteRecord,
     visibleAssignments,
@@ -106,6 +111,7 @@ function Planner() {
     kind: 'course' | 'assignment';
     id: string;
     title: string;
+    scope?: RecurrenceScope;
   } | null>(null);
   useEffect(() => {
     const update = () => {
@@ -133,8 +139,14 @@ function Planner() {
     setFilters({ ...defaultFilters, status: 'Completed' });
     navigate('Assignments');
   };
-  const save = (a: Assignment) => {
-    if (saveAssignment(a)) setEditing(null);
+  const save = (
+    a: Assignment,
+    rule?: RecurrenceRule,
+    scope: RecurrenceScope = 'one',
+  ) => {
+    if (a.recurrenceSeriesId || rule) {
+      if (saveRecurring(a, rule, scope)) setEditing(null);
+    } else if (saveAssignment(a)) setEditing(null);
   };
   const add = (date?: string) => {
     if (!data?.courses.length) {
@@ -165,7 +177,7 @@ function Planner() {
         context.registerTool(
           {
             name: 'start_assignment_creation',
-            description: '打开添加作业表单，可预填名称；不会直接保存作业。',
+            description: t('打开添加作业表单，可预填名称；不会直接保存作业。'),
             inputSchema: {
               type: 'object',
               properties: { title: { type: 'string' } },
@@ -179,7 +191,7 @@ function Planner() {
                 Object.keys(input).some((k) => k !== 'title') ||
                 ('title' in input && typeof input.title !== 'string')
               )
-                throw Error('作业名称必须为文本');
+                throw Error(t('作业名称必须为文本'));
               setEditing({ title: (input as { title?: string }).title || '' });
               return { opened: true };
             },
@@ -189,7 +201,7 @@ function Planner() {
       ).catch(() => {});
     } catch {}
     return () => lifecycle.abort();
-  }, []);
+  }, [language]);
   const courses = data?.courses ?? [];
   const filtered = filterAssignments(
     visibleAssignments,
@@ -208,12 +220,12 @@ function Planner() {
     navigate('Assignments');
   };
   const subtitles = {
-    Dashboard: '理清截止时间，安心做好眼前这一项。',
-    Calendar: '看看整个学期，为接下来的任务留出时间。',
-    Agenda: '每天要做什么，一目了然。',
-    Assignments: '待完成与已完成的作业，都能在这里找到。',
-    Courses: '把这个学期的每一门课安排好。',
-    Settings: '简单好用，专注于自己的节奏。',
+    Dashboard: t('理清截止时间，安心做好眼前这一项。'),
+    Calendar: t('看看整个学期，为接下来的任务留出时间。'),
+    Agenda: t('每天要做什么，一目了然。'),
+    Assignments: t('待完成与已完成的作业，都能在这里找到。'),
+    Courses: t('把这个学期的每一门课安排好。'),
+    Settings: t('简单好用，专注于自己的节奏。'),
   };
   return (
     <>
@@ -222,7 +234,7 @@ function Planner() {
           <div className="brand">
             <GraduationCap />
             {PRODUCT_NAME}
-            <span>测试版</span>
+            <span>{t('测试版')}</span>
           </div>
           <nav className="main-nav">
             {pages.slice(0, 5).map((p, i) => {
@@ -247,10 +259,10 @@ function Planner() {
             })}
           </nav>
           <div className="section-heading course-heading">
-            <p className="eyebrow">我的课程</p>
+            <p className="eyebrow">{t('我的课程')}</p>
             <button
               className="icon-button"
-              aria-label="添加课程"
+              aria-label={t('添加课程')}
               onClick={() => {
                 setOpenMobile(false);
                 setEditingCourse({});
@@ -273,7 +285,8 @@ function Planner() {
             <div className="local-note">
               <CheckCircle2 size={16} />
               <div>
-                留一点空间，专心做事。<p>一次完成一项任务。</p>
+                {t('留一点空间，专心做事。')}
+                <p>{t('一次完成一项任务。')}</p>
               </div>
             </div>
             <button
@@ -281,12 +294,13 @@ function Planner() {
               onClick={() => navigate('Settings')}
             >
               <Settings size={18} />
-              设置
+              {t('设置')}
             </button>
             <div className="student-profile">
-              <span className="avatar">我</span>
+              <span className="avatar">{t('我')}</span>
               <div>
-                我的空间<p>个人学习计划</p>
+                {t('我的空间')}
+                <p>{t('个人学习计划')}</p>
               </div>
             </div>
           </div>
@@ -297,7 +311,8 @@ function Planner() {
           <div className="breadcrumb">
             <SidebarTrigger />
             <span>
-              我的空间 <span className="slash">/</span> <b>{t(page)}</b>
+              {t('我的空间')}
+              <span className="slash">/</span> <b>{t(page)}</b>
             </span>
           </div>
           <span suppressHydrationWarning className="header-date">
@@ -314,11 +329,11 @@ function Planner() {
               )}
               <h1>
                 {page === 'Dashboard'
-                  ? '接下来做什么？'
+                  ? t('接下来做什么？')
                   : page === 'Agenda'
-                    ? '每天，都有条理。'
+                    ? t('每天，都有条理。')
                     : page === 'Courses'
-                      ? '新学期，有条不紊。'
+                      ? t('新学期，有条不紊。')
                       : t(page)}
               </h1>
               <p>{subtitles[page]}</p>
@@ -331,22 +346,22 @@ function Planner() {
                 }
               >
                 <Plus size={18} />
-                {page === 'Courses' ? '添加课程' : '添加作业'}
+                {page === 'Courses' ? t('添加课程') : t('添加作业')}
               </button>
             )}
           </div>
           {error && (
             <div role="alert" className="error-banner">
-              {error}
+              {t(error)}
             </div>
           )}
           {!data ? (
             <Blank
-              title={error ? '暂时无法读取计划' : '正在打开你的计划…'}
+              title={error ? t('暂时无法读取计划') : t('正在打开你的计划…')}
               description={
                 error
-                  ? '原始数据已保留。请检查浏览器的存储设置后重试。'
-                  : '请稍等。'
+                  ? t('原始数据已保留。请检查浏览器的存储设置后重试。')
+                  : t('请稍等。')
               }
             />
           ) : (
@@ -368,36 +383,36 @@ function Planner() {
               {['Calendar', 'Agenda'].includes(page) && (
                 <div className="filters">
                   <Choice
-                    label="课程"
+                    label={t('课程')}
                     value={calendarFilters.course}
                     onChange={(course) =>
                       setCalendarFilters({ ...calendarFilters, course })
                     }
                     options={[
-                      { value: 'all', label: '全部课程' },
+                      { value: 'all', label: t('全部课程') },
                       ...courses.map((c) => ({ value: c.id, label: c.code })),
                     ]}
                   />
                   <Choice
-                    label="优先级"
+                    label={t('优先级')}
                     value={calendarFilters.priority}
                     onChange={(priority) =>
                       setCalendarFilters({ ...calendarFilters, priority })
                     }
                     options={[
-                      { value: 'all', label: '全部优先级' },
+                      { value: 'all', label: t('全部优先级') },
                       ...priorities,
                     ]}
                   />
                   <Choice
-                    label="状态"
+                    label={t('状态')}
                     value={calendarFilters.status}
                     onChange={(status) =>
                       setCalendarFilters({ ...calendarFilters, status })
                     }
                     options={[
-                      { value: 'active', label: '待完成' },
-                      { value: 'all', label: '全部' },
+                      { value: 'active', label: t('待完成') },
+                      { value: 'all', label: t('全部') },
                       ...statuses,
                     ]}
                   />
@@ -433,14 +448,15 @@ function Planner() {
                           </span>
                           <button
                             className="text-button"
-                            aria-label={`编辑课程「${c.code}」`}
+                            aria-label={t('编辑课程「{0}」', { '0': c.code })}
                             onClick={() => setEditingCourse(c)}
                           >
-                            编辑 <ArrowUpRight size={15} />
+                            {t('编辑')}
+                            <ArrowUpRight size={15} />
                           </button>
                         </div>
                         <h2>{c.name}</h2>
-                        <p>{c.professor || '尚未填写授课教师'}</p>
+                        <p>{c.professor || t('尚未填写授课教师')}</p>
                         <div className="course-card-foot">
                           <button
                             className="text-button"
@@ -453,7 +469,8 @@ function Planner() {
                                   a.status !== 'Completed',
                               ).length
                             }{' '}
-                            项待完成作业 <ArrowUpRight size={15} />
+                            {t('项待完成作业')}
+                            <ArrowUpRight size={15} />
                           </button>
                           {c.website && /^https?:\/\//i.test(c.website) && (
                             <a
@@ -462,7 +479,7 @@ function Planner() {
                               rel="noreferrer"
                               className="text-button"
                             >
-                              课程网站 ↗
+                              {t('课程网站 ↗')}
                             </a>
                           )}
                         </div>
@@ -471,45 +488,67 @@ function Planner() {
                   </div>
                 ) : (
                   <Blank
-                    title="从第一门课程开始"
-                    description="添加课程，让这个学期更有条理。"
+                    title={t('从第一门课程开始')}
+                    description={t('添加课程，让这个学期更有条理。')}
                   />
                 ))}
               {page === 'Settings' && (
                 <section className="panel settings-panel">
-                  <h2>你的计划，随时在这里</h2>
+                  <h2>{t('你的计划，随时在这里')}</h2>
+                  <div className="setting-row">
+                    <div>
+                      <h3>{t('语言')}</h3>
+                      <p>{t('语言说明')}</p>
+                    </div>
+                    <Choice
+                      label={t('语言')}
+                      value={language}
+                      onChange={(v) => setLanguage(v as 'en' | 'zh-CN')}
+                      options={[
+                        { value: 'zh-CN', label: '中文' },
+                        { value: 'en', label: 'English' },
+                      ]}
+                    />
+                  </div>
                   <p>
-                    课程与作业会自动保存在当前设备的浏览器中，无需注册账号。
+                    {t(
+                      '课程与作业会自动保存在当前设备的浏览器中，无需注册账号。',
+                    )}
                   </p>
                   <div className="setting-row">
                     <div>
-                      <h3>外观</h3>
-                      <p>清爽、明亮的学习空间。</p>
+                      <h3>{t('外观')}</h3>
+                      <p>{t('清爽、明亮的学习空间。')}</p>
                     </div>
-                    <span className="badge">浅色模式</span>
+                    <span className="badge">{t('浅色模式')}</span>
                   </div>
                   <div className="setting-row">
                     <div>
-                      <h3>下一项推荐任务</h3>
+                      <h3>{t('下一项推荐任务')}</h3>
                       <p>
-                        综合截止时间、优先级和剩余工作量，帮你选择下一项任务。已逾期且未完成的作业优先显示。
+                        {t(
+                          '综合截止时间、优先级和剩余工作量，帮你选择下一项任务。已逾期且未完成的作业优先显示。',
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="setting-row">
                     <div>
-                      <h3>完成与恢复</h3>
+                      <h3>{t('完成与恢复')}</h3>
                       <p>
-                        勾选后可以立即撤销，也可以随时到“作业 →
-                        已完成”恢复任务。完成前的状态与进度会保留。
+                        {t(
+                          '勾选后可以立即撤销，也可以随时到“作业 → 已完成”恢复任务。完成前的状态与进度会保留。',
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="setting-row">
                     <div>
-                      <h3>本地存储</h3>
+                      <h3>{t('本地存储')}</h3>
                       <p>
-                        数据不会在不同浏览器或设备间同步。清除此网站的浏览器数据会移除你的计划。
+                        {t(
+                          '数据不会在不同浏览器或设备间同步。清除此网站的浏览器数据会移除你的计划。',
+                        )}
                       </p>
                     </div>
                   </div>
@@ -523,9 +562,15 @@ function Planner() {
         <AssignmentEditor
           key={editing.id || editing.dueDate || 'new'}
           item={editing}
+          series={data.recurrenceSeries?.find(
+            (s) => s.id === editing.recurrenceSeriesId,
+          )}
           courses={courses}
           close={() => setEditing(null)}
           save={save}
+          duplicate={(a) => {
+            if (duplicate(a)) setEditing(null);
+          }}
           restore={(a) => {
             toggleCompletion(a);
             setEditing(null);
@@ -565,22 +610,45 @@ function Planner() {
         <AlertDialogContent>
           <AlertDialogTitle>
             {deleting?.kind === 'course'
-              ? '确定要删除这门课程吗？'
-              : '确定要删除这个作业吗？'}
+              ? t('确定要删除这门课程吗？')
+              : t('确定要删除这个作业吗？')}
           </AlertDialogTitle>
           <AlertDialogDescription>
             「{deleting?.title}」
             {deleting?.kind === 'course'
-              ? `及其 ${data?.assignments.filter((a) => a.courseId === deleting.id).length || 0} 项作业将被删除。`
+              ? t('及其 {0} 项作业将被删除。', {
+                  '0':
+                    data?.assignments.filter((a) => a.courseId === deleting.id)
+                      .length || 0,
+                })
               : ''}
-            删除后将无法恢复。
+            {t('删除后将无法恢复。')}
           </AlertDialogDescription>
+          {deleting?.kind === 'assignment' &&
+            data?.assignments.find((a) => a.id === deleting.id)
+              ?.recurrenceSeriesId && (
+              <Choice
+                label={t('你想删除哪些作业？')}
+                value={deleting.scope ?? 'one'}
+                onChange={(v) =>
+                  setDeleting({ ...deleting, scope: v as RecurrenceScope })
+                }
+                options={[
+                  { value: 'one', label: t('仅删除这一次') },
+                  { value: 'future', label: t('删除这次及之后') },
+                  { value: 'all', label: t('删除整个系列') },
+                ]}
+              />
+            )}
           <div className="form-actions">
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('取消')}</AlertDialogCancel>
             <button
               className="danger-button"
               onClick={() => {
-                if (!deleting || !deleteRecord(deleting.kind, deleting.id))
+                if (
+                  !deleting ||
+                  !deleteRecord(deleting.kind, deleting.id, deleting.scope)
+                )
                   return;
                 if (filters.course === deleting.id)
                   setFilters({ ...filters, course: 'all' });
@@ -591,23 +659,23 @@ function Planner() {
                 setEditingCourse(null);
               }}
             >
-              删除
+              {t('删除')}
             </button>
           </div>
         </AlertDialogContent>
       </AlertDialog>
-      <div className="notice-stack" aria-label="操作提示">
+      <div className="notice-stack" aria-label={t('操作提示')}>
         {notices.map((notice) => (
           <div className="save-notice" key={notice.id}>
-            <output>✓ {notice.message}</output>
+            <output>✓ {t(notice.message, notice.params)}</output>
             {notice.assignmentId && (
               <button className="undo-button" onClick={() => undo(notice)}>
-                撤销
+                {t('撤销')}
               </button>
             )}
             <button
               className="notice-close"
-              aria-label="关闭提示"
+              aria-label={t('关闭提示')}
               onClick={() => dismiss(notice.id)}
             >
               <X size={16} />

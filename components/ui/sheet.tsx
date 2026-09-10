@@ -1,4 +1,5 @@
 'use client';
+import { t } from '@/lib/i18n';
 
 import * as React from 'react';
 import { Dialog as SheetPrimitive } from '@base-ui/react/dialog';
@@ -71,7 +72,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">关闭</span>
+            <span className="sr-only">{t('关闭')}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

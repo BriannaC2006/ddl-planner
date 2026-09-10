@@ -54,13 +54,16 @@ export function AssignmentRow({
     >
       <button
         className="row-details-target"
-        aria-label={`查看作业「${a.title}」`}
+        aria-label={t('查看作业「{0}」', { '0': a.title })}
         onClick={() => edit(a)}
       />
       <Checkbox
         className="complete-button"
         checked={done}
-        aria-label={`${done ? '恢复任务' : '完成作业'}「${a.title}」`}
+        aria-label={t('{0}「{1}」', {
+          '0': done ? t('恢复任务') : t('标记完成'),
+          '1': a.title,
+        })}
         onClick={(e) => e.stopPropagation()}
         onCheckedChange={() => complete(a)}
       />
@@ -69,26 +72,45 @@ export function AssignmentRow({
         <p>
           <i className="course-dot" style={{ background: c?.color }} />
           {c?.code} <span>· {t(a.type)}</span>
+          {a.recurrenceSeriesId && (
+            <span
+              className="repeat-badge"
+              title={t(a.recurrenceException ? '单次例外' : '循环')}
+            >
+              {' '}
+              ↻{' '}
+              {t(
+                a.recurrenceRule?.frequency === 'daily'
+                  ? '每天'
+                  : a.recurrenceRule?.frequency === 'biweekly'
+                    ? '每两周'
+                    : a.recurrenceRule?.frequency === 'custom'
+                      ? '自定义'
+                      : '每周',
+              )}
+            </span>
+          )}
         </p>
       </div>
       <div className="row-deadline">
         <span
           className={urgencyLabel(a) === 'Overdue' && !done ? 'overdue' : ''}
         >
-          {done ? '已完成' : relativeDate(a.dueDate)}
+          {done ? t('已完成') : relativeDate(a.dueDate)}
         </span>
         <small title={exactDate(a.dueDate)}>
-          截止：{compactDate(a.dueDate)}
+          {t('截止：')}
+          {compactDate(a.dueDate)}
         </small>
       </div>
       <span className={`badge priority-${a.priority.toLowerCase()}`}>
-        ● {t(a.priority)}优先级
+        ● {t('priority.label', { priority: t(a.priority) })}
       </span>
       <span className="row-hours">
         <Clock3 size={14} />
         {hours(a.estimatedMinutes)}
       </span>
-      <span className="row-status">{done ? '已完成' : t(a.status)}</span>
+      <span className="row-status">{done ? t('已完成') : t(a.status)}</span>
       {done ? (
         <button
           className="restore-button"
@@ -96,14 +118,14 @@ export function AssignmentRow({
             e.stopPropagation();
             complete(a);
           }}
-          aria-label={`恢复任务「${a.title}」`}
+          aria-label={t('恢复任务「{0}」', { '0': a.title })}
         >
-          恢复任务
+          {t('恢复任务')}
         </button>
       ) : (
         <button
           className="icon-button"
-          aria-label={`编辑作业「${a.title}」`}
+          aria-label={t('编辑作业「{0}」', { '0': a.title })}
           onClick={(e) => {
             e.stopPropagation();
             edit(a);
@@ -162,15 +184,18 @@ export function Dashboard(
           <span className="stat-icon">
             <ListIcon />
           </span>
-          <b>{dueSoon}</b> 项本周截止
+          <b>{dueSoon}</b>
+          {t('项本周截止')}
         </span>
         <span>
           <Clock3 size={18} />
-          <b>{Math.round(total * 10) / 10} 小时</b> 本周剩余
+          <b>{hours(total * 60)}</b>
+          {t('本周剩余')}
         </span>
         <span>
           <CheckCheck size={18} />
-          <b>{props.completedAssignments.length}</b> 项已完成
+          <b>{props.completedAssignments.length}</b>
+          {t('项已完成')}
         </span>
       </div>
       <div className="dashboard-grid">
@@ -179,7 +204,8 @@ export function Dashboard(
             className={`focus ${props.completing?.[focus.id] ? 'is-completing' : ''}`}
           >
             <div className="section-label">
-              <Sparkles size={18} /> 接下来做什么？
+              <Sparkles size={18} />
+              {t('接下来做什么？')}
               <span>{t(urgencyLabel(focus))}</span>
             </div>
             <p className="course-tag">
@@ -191,58 +217,64 @@ export function Dashboard(
             </button>
             <p className={urgencyLabel(focus) === 'Overdue' ? 'overdue' : ''}>
               {props.completing?.[focus.id]
-                ? '已完成'
+                ? t('已完成')
                 : relativeDate(focus.dueDate)}
             </p>
             <p className="exact-focus">{exactDate(focus.dueDate)}</p>
             <div className="focus-meta">
-              <span>{t(focus.priority)}优先级</span>
-              <span>◷ 预计 {hours(focus.estimatedMinutes)}</span>
               <span>
-                {props.completing?.[focus.id] ? '已完成' : t(focus.status)}
+                {t('priority.label', { priority: t(focus.priority) })}
+              </span>
+              <span>
+                {t('◷ 预计')}
+                {hours(focus.estimatedMinutes)}
+              </span>
+              <span>
+                {props.completing?.[focus.id] ? t('已完成') : t(focus.status)}
               </span>
             </div>
             <div className="progress-label">
-              <span>完成进度</span>
+              <span>{t('完成进度')}</span>
               <b>{props.completing?.[focus.id] ? 100 : focus.progress}%</b>
             </div>
             <Progress
               value={props.completing?.[focus.id] ? 100 : focus.progress}
-              aria-label={`${focus.title} 完成进度`}
+              aria-label={t('{0} 完成进度', { '0': focus.title })}
             />
             <div className="focus-actions">
               <button
                 className="white-button"
                 onClick={() => props.edit(focus)}
               >
-                继续作业 <ArrowUpRight size={17} />
+                {t('继续作业')}
+                <ArrowUpRight size={17} />
               </button>
               <button
                 className="focus-complete"
                 onClick={() => props.complete(focus)}
               >
                 <Check size={16} />
-                {props.completing?.[focus.id] ? '恢复任务' : '标记完成'}
+                {props.completing?.[focus.id] ? t('恢复任务') : t('标记完成')}
               </button>
             </div>
           </section>
         ) : (
           <section className="focus">
             <Blank
-              title="暂时没有待完成的作业 🎉"
-              description="手头的任务都完成了，给自己一点休息时间。"
+              title={t('暂时没有待完成的作业 🎉')}
+              description={t('手头的任务都完成了，给自己一点休息时间。')}
             />
           </section>
         )}
         <section className="panel workload">
           <div className="section-heading">
-            <h2>本周任务量</h2>
+            <h2>{t('本周任务量')}</h2>
             <span className="week-label">
               {dateLabel(start, { month: 'numeric', day: 'numeric' })} –{' '}
               {days[6].date.getDate()}
             </span>
           </div>
-          <p>按截止日期统计剩余耗时（小时）</p>
+          <p>{t('按截止日期统计剩余耗时（小时）')}</p>
           <div className="bars">
             {days.map(({ date, h }) => (
               <div
@@ -266,17 +298,19 @@ export function Dashboard(
           </div>
           <p className="workload-foot">
             <span className="course-dot" />
-            {Math.round(total * 10) / 10} 小时，按自己的节奏推进
+            {t('workload.pace', { duration: hours(total * 60) })}
           </p>
         </section>
       </div>
       <section className="panel upcoming">
         <div className="section-heading">
           <h2>
-            近期截止 <span className="count">{active.length}</span>
+            {t('近期截止')}
+            <span className="count">{active.length}</span>
           </h2>
           <button className="text-button" onClick={props.viewAll}>
-            查看全部作业 <ArrowUpRight size={15} />
+            {t('查看全部作业')}
+            <ArrowUpRight size={15} />
           </button>
         </div>
         {active.length ? (
@@ -285,18 +319,20 @@ export function Dashboard(
             .map((a) => <AssignmentRow key={a.id} a={a} {...props} />)
         ) : (
           <Blank
-            title="近期没有要截止的作业 🎉"
-            description="有新任务时，记得添加到这里。"
+            title={t('近期没有要截止的作业 🎉')}
+            description={t('有新任务时，记得添加到这里。')}
           />
         )}
       </section>
       <Collapsible className="panel completed-today">
         <div className="section-heading">
           <CollapsibleTrigger className="completed-toggle">
-            今天已完成 {todayCompleted.length} 项<ChevronDown size={17} />
+            {t('completed.today', { count: todayCompleted.length })}
+            <ChevronDown size={17} />
           </CollapsibleTrigger>
           <button className="text-button" onClick={props.viewCompleted}>
-            查看全部已完成 <ArrowUpRight size={15} />
+            {t('查看全部已完成')}
+            <ArrowUpRight size={15} />
           </button>
         </div>
         <CollapsibleContent>
@@ -306,13 +342,13 @@ export function Dashboard(
             ))
           ) : (
             <Blank
-              title="今天还没有完成的作业。"
-              description="完成一项后，会记录在这里。"
+              title={t('今天还没有完成的作业。')}
+              description={t('完成一项后，会记录在这里。')}
             />
           )}
         </CollapsibleContent>
       </Collapsible>
-      <p className="dashboard-note">一次专注一项，慢慢也能走很远。</p>
+      <p className="dashboard-note">{t('一次专注一项，慢慢也能走很远。')}</p>
     </>
   );
 }
@@ -334,9 +370,9 @@ export function Agenda(props: ViewProps) {
             <div>
               <b>
                 {date === dateKey(new Date())
-                  ? '今天'
+                  ? t('今天')
                   : date === dateKey(new Date(now + 86400000))
-                    ? '明天'
+                    ? t('明天')
                     : dateLabel(date + 'T12:00', { weekday: 'short' })}
               </b>
               <p>
@@ -354,8 +390,8 @@ export function Agenda(props: ViewProps) {
     </div>
   ) : (
     <Blank
-      title="暂时没有待完成的作业 🎉"
-      description="试试其他筛选条件，或添加下一项作业。"
+      title={t('暂时没有待完成的作业 🎉')}
+      description={t('试试其他筛选条件，或添加下一项作业。')}
     />
   );
 }
@@ -398,11 +434,11 @@ export function CalendarView({
               )
             }
           >
-            今天
+            {t('今天')}
           </button>
           <button
             className="icon-button"
-            aria-label="上个月"
+            aria-label={t('上个月')}
             onClick={() =>
               setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
             }
@@ -411,7 +447,7 @@ export function CalendarView({
           </button>
           <button
             className="icon-button"
-            aria-label="下个月"
+            aria-label={t('下个月')}
             onClick={() =>
               setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
             }
@@ -422,7 +458,15 @@ export function CalendarView({
       </div>
       <div className="calendar-scroll">
         <div className="month-grid">
-          {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((d) => (
+          {[
+            t('周一'),
+            t('周二'),
+            t('周三'),
+            t('周四'),
+            t('周五'),
+            t('周六'),
+            t('周日'),
+          ].map((d) => (
             <div className="day-heading" key={d}>
               {d}
             </div>
@@ -434,7 +478,7 @@ export function CalendarView({
             >
               <button
                 className={`date-button ${dateKey(d) === dateKey(new Date()) ? 'today-date' : ''}`}
-                aria-label={`在 ${dateLabel(d)} 添加作业`}
+                aria-label={t('在 {0} 添加作业', { '0': dateLabel(d) })}
                 onClick={() => add(dateKey(d))}
               >
                 {d.getDate()}
@@ -466,7 +510,7 @@ export function CalendarView({
         </div>
       </div>
       <p className="calendar-hint">
-        点击日期添加作业，点击作业查看或编辑详情。
+        {t('点击日期添加作业，点击作业查看或编辑详情。')}
       </p>
     </section>
   );

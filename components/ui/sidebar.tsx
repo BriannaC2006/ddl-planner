@@ -1,4 +1,5 @@
 'use client';
+import { t } from '@/lib/i18n';
 
 import * as React from 'react';
 import { mergeProps } from '@base-ui/react/merge-props';
@@ -196,8 +197,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>导航</SheetTitle>
-            <SheetDescription>移动端导航菜单。</SheetDescription>
+            <SheetTitle>{t('侧栏')}</SheetTitle>
+            <SheetDescription>{t('显示移动侧栏。')}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
@@ -272,7 +273,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon className="cn-rtl-flip" />
-      <span className="sr-only">切换导航</span>
+      <span className="sr-only">{t('切换侧栏')}</span>
     </Button>
   );
 }
@@ -284,10 +285,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="切换导航"
+      aria-label={t('切换侧栏')}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="切换导航"
+      title={t('切换侧栏')}
       className={cn(
         'hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2',
         'in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize',

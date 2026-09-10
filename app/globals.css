@@ -1505,3 +1505,14 @@ h1 {
   flex: 1;
   overflow-wrap: anywhere;
 }
+
+.recurrence-controls { border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin: 16px 0; min-width: 0; }
+.recurrence-controls:disabled { opacity: .65; pointer-events: none; }
+.weekday-choices { border: 0; padding: 8px 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.weekday-choices legend { font-size: 14px; margin-bottom: 8px; }
+.weekday-choices label { display: flex; align-items: center; gap: 5px; font-size: 14px; }
+.recurrence-help, .recurrence-preview { color: var(--muted-foreground); font-size: 13px; line-height: 1.6; margin-top: 8px; }
+.series-scope { background: var(--muted); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+.repeat-badge { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+.duplicate-action { margin-top: 14px; }
+.setting-row > .field { min-width: 150px; }

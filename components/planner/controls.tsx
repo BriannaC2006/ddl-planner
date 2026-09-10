@@ -29,7 +29,7 @@ export function Choice({
               .map((o) =>
                 typeof o === 'string' ? { value: o, label: t(o) } : o,
               )
-              .find((o) => o.value === value)?.label || '请选择课程'}
+              .find((o) => o.value === value)?.label || t('请选择课程')}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>

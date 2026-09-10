@@ -23,6 +23,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: npx tsc --noEmit
+      - run: node --experimental-strip-types --test tests/*.test.mjs
+        env:
+          TZ: America/Los_Angeles
       - run: npm run build:pages
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
