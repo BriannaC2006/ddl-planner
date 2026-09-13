@@ -204,9 +204,13 @@ function Planner() {
   }, [language]);
   const courses = data?.courses ?? [];
   const filtered = filterAssignments(
-    visibleAssignments,
+    page === 'Agenda' ? (data?.assignments ?? []) : visibleAssignments,
     courses,
-    page === 'Assignments' ? filters : calendarFilters,
+    page === 'Assignments'
+      ? filters
+      : page === 'Agenda'
+        ? { ...calendarFilters, status: 'all' }
+        : calendarFilters,
   );
   const viewProps = {
     assignments: filtered,
@@ -404,18 +408,20 @@ function Planner() {
                       ...priorities,
                     ]}
                   />
-                  <Choice
-                    label={t('状态')}
-                    value={calendarFilters.status}
-                    onChange={(status) =>
-                      setCalendarFilters({ ...calendarFilters, status })
-                    }
-                    options={[
-                      { value: 'active', label: t('待完成') },
-                      { value: 'all', label: t('全部') },
-                      ...statuses,
-                    ]}
-                  />
+                  {page === 'Calendar' && (
+                    <Choice
+                      label={t('状态')}
+                      value={calendarFilters.status}
+                      onChange={(status) =>
+                        setCalendarFilters({ ...calendarFilters, status })
+                      }
+                      options={[
+                        { value: 'active', label: t('待完成') },
+                        { value: 'all', label: t('全部') },
+                        ...statuses,
+                      ]}
+                    />
+                  )}
                 </div>
               )}
               {page === 'Assignments' && (
@@ -425,7 +431,9 @@ function Planner() {
                   setFilters={setFilters}
                 />
               )}
-              {page === 'Agenda' && <Agenda {...viewProps} />}
+              {page === 'Agenda' && (
+                <Agenda {...viewProps} completing={undefined} />
+              )}
               {page === 'Calendar' && <CalendarView {...viewProps} add={add} />}
               {page === 'Courses' &&
                 (courses.length ? (

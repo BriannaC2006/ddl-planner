@@ -1516,3 +1516,32 @@ h1 {
 .repeat-badge { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
 .duplicate-action { margin-top: 14px; }
 .setting-row > .field { min-width: 150px; }
+
+/* Agenda is a daily record: completed rows stay in their deadline group. */
+.agenda .assignment-row {
+  transition: opacity 300ms ease;
+}
+.agenda .assignment-row.completed {
+  opacity: 0.65;
+}
+.agenda .assignment-title h3 {
+  transition:
+    color 300ms ease,
+    text-decoration-color 300ms ease;
+  text-decoration-color: transparent;
+}
+.agenda .completed .assignment-title h3 {
+  text-decoration-color: currentColor;
+}
+.agenda .completed [data-slot='checkbox-indicator'] {
+  animation: check-pop 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agenda .assignment-row,
+  .agenda .assignment-title h3 {
+    transition: none;
+  }
+  .agenda .completed [data-slot='checkbox-indicator'] {
+    animation: none;
+  }
+}

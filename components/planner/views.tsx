@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useNow } from '@/hooks/use-now';
 import {
   ArrowUpRight,
@@ -357,12 +357,40 @@ function ListIcon() {
 }
 export function Agenda(props: ViewProps) {
   const now = useNow();
+  const agendaRef = useRef<HTMLDivElement>(null);
+  const positions = useRef(new Map<string, number>());
+  useLayoutEffect(() => {
+    const rows = agendaRef.current?.querySelectorAll<HTMLElement>(
+      '[data-assignment-id]',
+    );
+    const next = new Map<string, number>();
+    rows?.forEach((row) => {
+      const id = row.dataset.assignmentId!;
+      const top = row.offsetTop;
+      next.set(id, top);
+      const previous = positions.current.get(id);
+      if (
+        previous !== undefined &&
+        previous !== top &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        row.animate(
+          [
+            { transform: `translateY(${previous - top}px)` },
+            { transform: 'translateY(0)' },
+          ],
+          { duration: 300, easing: 'ease-out' },
+        );
+      }
+    });
+    positions.current = next;
+  }, [props.assignments]);
   const sorted = [...props.assignments].sort((a, b) =>
     a.dueDate.localeCompare(b.dueDate),
   );
   const groups = Map.groupBy(sorted, (a) => dateKey(a.dueDate));
   return sorted.length ? (
-    <div className="agenda">
+    <div className="agenda" ref={agendaRef}>
       {Array.from(groups).map(([date, items]) => (
         <section key={date}>
           <div className="agenda-date">
@@ -381,9 +409,15 @@ export function Agenda(props: ViewProps) {
             </div>
           </div>
           <div className="panel">
-            {items.map((a) => (
-              <AssignmentRow key={a.id} a={a} {...props} />
-            ))}
+            {items
+              .sort(
+                (a, b) =>
+                  Number(a.status === 'Completed') -
+                  Number(b.status === 'Completed'),
+              )
+              .map((a) => (
+                <AssignmentRow key={a.id} a={a} {...props} />
+              ))}
           </div>
         </section>
       ))}
