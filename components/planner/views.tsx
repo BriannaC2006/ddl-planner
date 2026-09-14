@@ -1,5 +1,5 @@
 'use client';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNow } from '@/hooks/use-now';
 import {
   ArrowUpRight,
@@ -355,8 +355,35 @@ export function Dashboard(
 function ListIcon() {
   return <Check size={17} />;
 }
-export function Agenda(props: ViewProps) {
+export function Agenda(props: ViewProps & { entry?: number }) {
   const now = useNow();
+  const today = dateKey(new Date(now));
+  const todayRef = useRef<HTMLElement>(null);
+  const todayHeadingRef = useRef<HTMLDivElement>(null);
+  const [todayVisible, setTodayVisible] = useState(true);
+  const scrollToToday = (smooth: boolean) => {
+    todayRef.current?.scrollIntoView({
+      block: 'start',
+      behavior:
+        smooth && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'smooth'
+          : 'instant',
+    });
+  };
+  // Only navigation triggers positioning; updates and manual browsing do not.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => scrollToToday(false));
+    return () => cancelAnimationFrame(frame);
+  }, [props.entry]);
+  useEffect(() => {
+    const heading = todayHeadingRef.current;
+    if (!heading) return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setTodayVisible(entry.isIntersecting),
+    );
+    observer.observe(heading);
+    return () => observer.disconnect();
+  }, [today]);
   const agendaRef = useRef<HTMLDivElement>(null);
   const positions = useRef(new Map<string, number>());
   useLayoutEffect(() => {
@@ -389,44 +416,67 @@ export function Agenda(props: ViewProps) {
     a.dueDate.localeCompare(b.dueDate),
   );
   const groups = Map.groupBy(sorted, (a) => dateKey(a.dueDate));
-  return sorted.length ? (
+  if (!groups.has(today)) groups.set(today, []);
+  return (
     <div className="agenda" ref={agendaRef}>
-      {Array.from(groups).map(([date, items]) => (
-        <section key={date}>
-          <div className="agenda-date">
-            <span>{new Date(date + 'T12:00').getDate()}</span>
-            <div>
-              <b>
-                {date === dateKey(new Date())
-                  ? t('今天')
-                  : date === dateKey(new Date(now + 86400000))
-                    ? t('明天')
-                    : dateLabel(date + 'T12:00', { weekday: 'short' })}
-              </b>
-              <p>
-                {dateLabel(date + 'T12:00', { month: 'long', year: 'numeric' })}
-              </p>
+      {Array.from(groups)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, items]) => (
+          <section
+            key={date}
+            ref={date === today ? todayRef : undefined}
+            id={date === today ? 'agenda-today' : undefined}
+            className={date === today ? 'agenda-today' : undefined}
+          >
+            <div
+              className="agenda-date"
+              ref={date === today ? todayHeadingRef : undefined}
+            >
+              <span>{new Date(date + 'T12:00').getDate()}</span>
+              <div>
+                <b>
+                  {date === today
+                    ? t('今天')
+                    : date === dateKey(new Date(now + 86400000))
+                      ? t('明天')
+                      : dateLabel(date + 'T12:00', { weekday: 'short' })}
+                </b>
+                <p>
+                  {dateLabel(date + 'T12:00', {
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short',
+                  })}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="panel">
-            {items
-              .sort(
-                (a, b) =>
-                  Number(a.status === 'Completed') -
-                  Number(b.status === 'Completed'),
-              )
-              .map((a) => (
-                <AssignmentRow key={a.id} a={a} {...props} />
-              ))}
-          </div>
-        </section>
-      ))}
+            <div className="panel">
+              {!items.length && (
+                <p className="agenda-empty-today">
+                  {t('今天没有截止的作业 🎉')}
+                </p>
+              )}
+              {items
+                .sort(
+                  (a, b) =>
+                    Number(a.status === 'Completed') -
+                    Number(b.status === 'Completed'),
+                )
+                .map((a) => (
+                  <AssignmentRow key={a.id} a={a} {...props} />
+                ))}
+            </div>
+          </section>
+        ))}
+      {!todayVisible && (
+        <button
+          className="agenda-back-today"
+          onClick={() => scrollToToday(true)}
+        >
+          {t('回到今天')}
+        </button>
+      )}
     </div>
-  ) : (
-    <Blank
-      title={t('暂时没有待完成的作业 🎉')}
-      description={t('试试其他筛选条件，或添加下一项作业。')}
-    />
   );
 }
 export function CalendarView({

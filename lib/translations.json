@@ -211,5 +211,7 @@
   "date.hours.one": "Due in {count} hour",
   "date.days.one": "{count} day left",
   "date.overdue.one": "{count} day overdue",
-  "workload.pace": "{duration} — work at your own pace"
+  "workload.pace": "{duration} — work at your own pace",
+  "今天没有截止的作业 🎉": "No assignments due today 🎉",
+  "回到今天": "Back to today"
 }

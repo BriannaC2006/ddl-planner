@@ -99,6 +99,7 @@ function Planner() {
     deleteRecord,
     visibleAssignments,
   } = usePlanner();
+  const [agendaEntry, setAgendaEntry] = useState(0);
   const [page, setPage] = useState<Page>('Dashboard');
   const [filters, setFilters] = useState<AssignmentFilters>(defaultFilters);
   const [calendarFilters, setCalendarFilters] =
@@ -127,6 +128,7 @@ function Planner() {
     return () => window.removeEventListener('hashchange', update);
   }, []);
   const navigate = (p: Page) => {
+    if (p === 'Agenda') setAgendaEntry((entry) => entry + 1);
     setPage(p);
     window.location.assign('#' + p);
     setOpenMobile(false);
@@ -432,7 +434,11 @@ function Planner() {
                 />
               )}
               {page === 'Agenda' && (
-                <Agenda {...viewProps} completing={undefined} />
+                <Agenda
+                  {...viewProps}
+                  completing={undefined}
+                  entry={agendaEntry}
+                />
               )}
               {page === 'Calendar' && <CalendarView {...viewProps} add={add} />}
               {page === 'Courses' &&
